@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+# Launcher: builds the jar on first run, then starts the app.
+set -eu
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+JAR="$ROOT/target/credit_simulator.jar"
+
+if [ ! -f "$JAR" ]; then
+    command -v mvn >/dev/null 2>&1 || { echo "Error: Maven (mvn) is required to build." >&2; exit 127; }
+    echo "Building credit_simulator..." >&2
+    (cd "$ROOT" && mvn -B -q -DskipTests package) >&2
+fi
+
+command -v java >/dev/null 2>&1 || { echo "Error: Java 17+ is required." >&2; exit 127; }
+exec java -jar "$JAR" "$@"

@@ -1,0 +1,2 @@
+#!/usr/bin/env sh
+exec "$(cd "$(dirname "$0")" && pwd)/bin/credit_simulator" "$@"
