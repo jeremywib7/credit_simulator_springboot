@@ -1,0 +1,4 @@
+* text=auto
+credit_simulator text eol=lf
+bin/credit_simulator text eol=lf
+*.sh text eol=lf
