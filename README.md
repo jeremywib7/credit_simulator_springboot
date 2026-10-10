@@ -5,12 +5,13 @@ Only runtime library: `jackson-databind` (JSON for the web-service call). Tests 
 
 ## Requirements
 - Java 17+
-- Maven 3.8+ (only to build; Docker image needs neither)
+- Nothing else to install for Maven: the bundled Maven Wrapper (./mvnw) downloads it on first build.
+  Docker image needs neither Java nor Maven on the host.
 
 ## Run (step by step)
 ```sh
 git clone <repo-url> && cd credit_simulator
-./credit_simulator                     # interactive (first run builds target/credit_simulator.jar)
+./credit_simulator                     # interactive (builds target/credit_simulator.jar if missing or outdated)
 ./credit_simulator file_inputs.txt     # from file
 bin/credit_simulator file_inputs.txt   # same, via bin/
 ```
@@ -29,19 +30,20 @@ Type `show` to list them at any time.
 | `list` | Print the results saved in the active sheet |
 | `exit` | Quit |
 
-Sheets live in memory for the current session.
+Sheets live in memory for the current session only (assumption: the task does not ask for persistence).
 
 ### File input format (`file_inputs.txt`)
 Six lines, in order:
 ```
 Mobil          # Mobil|Motor, case-insensitive
-Baru           # Baru|Bekas, case-insensitive
-2025           # 4-digit year
+Bekas          # Baru|Bekas, case-insensitive
+2020           # 4-digit year
 1000000000     # total loan, 1..1,000,000,000
 6              # tenor, 1-6 years
 500000000      # down payment
 ```
-Note: a `Baru` vehicle needs year >= current year - 1, so update the year in the sample over time.
+Year must be <= the current year; a `Baru` vehicle also needs year >= current year - 1.
+The bundled sample uses `Bekas`/2020 so it stays valid over time.
 
 ### Sample output
 ```
@@ -52,11 +54,34 @@ tahun 3 : Rp. 8,804,745.00/bln , Suku Bunga : 8,6%
 
 ## Rules implemented
 - New vehicle: year >= current year - 1; DP >= 35% of loan. Used vehicle: DP >= 25%.
-- Loan 1..1 billion, tenor 1-6 years, DP >= 0 and < loan.
+- Year <= current year. Loan 1..1 billion, tenor 1-6 years, DP >= 0 and < loan.
 - Base rate: Mobil 8%, Motor 9%. From year 2: even year +0.1%, odd year +0.5%.
 - Installment per year = (remaining balance + balance x rate) / remaining months. The balance
   carried to the next year is what is still unpaid after 12 installments, so the loan is fully
-  repaid at the end of the tenor. The task statement gives no formula; this is the chosen one.
+  repaid at the end of the tenor.
+
+### Worked example
+Price 100,000,000, DP 25,000,000 (used vehicle), Mobil, tenor 3 years, principal 75,000,000:
+
+| Year | Principal | Rate | Total (principal x (1 + rate)) | Monthly (total / remaining months) |
+|---|---|---|---|---|
+| 1 | 75,000,000 | 8% | 81,000,000 | 81,000,000 / 36 = 2,250,000.00 |
+| 2 | 54,000,000 | 8.1% | 58,374,000 | 58,374,000 / 24 = 2,432,250.00 |
+| 3 | 29,187,000 | 8.6% | 31,697,082 | 31,697,082 / 12 = 2,641,423.50 |
+
+Next-year principal = total - 12 x monthly. The sample numbers in the task statement
+(3,500,000 / 3,501,000 / 3,505,000) are illustrative and cannot be derived from the inputs.
+
+## Project layout
+```
+credit_simulator            launcher at project root (delegates to bin/credit_simulator)
+mvnw, mvnw.cmd, .mvn/      Maven Wrapper
+bin/credit_simulator        builds the jar on first run, then runs it
+scripts/smoke-test.sh       end-to-end check of the launcher
+src/main/java/com/credit    controller, factory, model, service, view, exception
+src/test/java/com/credit    JUnit 5 tests, same package layout
+Dockerfile, .github/workflows/ci.yml
+```
 
 ## Design
 - `model` records/enums, `factory.LoanRequestFactory` (validates and builds requests),
@@ -66,10 +91,21 @@ tahun 3 : Rp. 8,804,745.00/bln , Suku Bunga : 8,6%
 
 ## Tests
 ```sh
-mvn test                    # 41 unit tests (JUnit 5), no network needed
-mvn verify                  # tests + build jar
+./mvnw test                 # unit tests (JUnit 5), no network needed for the API flow
+./mvnw verify               # tests + build jar
 sh scripts/smoke-test.sh    # end-to-end check of the launcher (needs the built jar or Maven)
 ```
+
+## Troubleshooting
+- `load` prints `PKIX path building failed` or an HTTP error: the mock endpoint in the task statement
+  (`run.mocky.io`) may no longer be served. It was observed answering with a self-signed
+  `CN=lolcatho.st` certificate and HTTP 404, so this is not a local trust problem. Point the app at
+  any server that returns the JSON from the task statement:
+  `CREDIT_API_URL=http://127.0.0.1:8765/loan ./credit_simulator`. The `load` flow itself is covered
+  by `LoanApiClientTest` against a local HTTP server.
+- IDE shows `class file for com.fasterxml.jackson.core.Versioned not found`: Jackson was added as
+  a plain jar instead of through Maven. Remove manual libraries and reload the Maven project.
+- Maven cannot download dependencies: use `./mvnw -o` (offline) if everything is already cached.
 
 ## Docker
 ```sh
