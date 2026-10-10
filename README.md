@@ -84,13 +84,25 @@ Dockerfile, .github/workflows/ci.yml
 ```
 
 ## Design
-- `model` records/enums, `factory.LoanRequestFactory` (validates and builds requests),
-  `service` (`LoanCalculator`, `LoanApiClient`, `SheetManager`), `view.ConsoleView`,
-  `controller.LoanController` (command registry; `show` is generated from it).
-- Web service URL comes from `application.properties` (`api.url`, bundled in the jar). Override it,
-  highest priority first: env `CREDIT_API_URL`, then `credit_simulator.properties` in the working
-  directory (git-ignored), e.g. `api.url=http://127.0.0.1:8765/loan.json`.
+Layers (MVC + Command + Factory), no framework:
 
+| Package | Role |
+|---|---|
+| `model` | Immutable records/enums: `LoanRequest`, `VehicleType`, `VehicleCondition`, `YearlyInstallment`, `Calculation` |
+| `factories` | `LoanRequestFactory` parses raw text and builds a valid `LoanRequest` |
+| `validator` | `LoanValidator` holds the business rules (year, loan cap, tenor, DP minimum) |
+| `constant` | `LoanRules` (numbers) and `ErrorMessage` (all user-facing messages) |
+| `service` | `LoanCalculator`, `SheetManager`, and `LoanDataProvider` (implemented by `LoanApiClient`) |
+| `command` | One class per menu command behind the `Command` interface; `CommandRegistry` drives dispatch and `show` |
+| `controller` | `LoanController` wires commands, dispatches input, runs file mode |
+| `view` | `ConsoleView` is the only class that reads stdin / writes stdout |
+| `config` | `AppConfig` resolves the API URL |
+
+Adding a command = add a `Command` class and register it in `LoanController`; `show` picks it up automatically.
+
+Web service URL comes from `application.properties` (`api.url`, bundled in the jar). Override it,
+highest priority first: env `CREDIT_API_URL`, then `credit_simulator.properties` in the working
+directory (git-ignored), e.g. `api.url=http://127.0.0.1:8765/loan.json`.
 ## Tests
 ```sh
 ./mvnw test                 # unit tests (JUnit 5), no network needed for the API flow
