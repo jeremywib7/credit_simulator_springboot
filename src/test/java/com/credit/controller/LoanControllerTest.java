@@ -89,11 +89,28 @@ class LoanControllerTest {
     }
 
     @Test
-    void invalidInputShowsErrorAndKeepsRunning() {
-        String input = "input\ntruk\nshow\nexit\n";
+    void invalidFieldIsAskedAgainWithoutRestartingTheFlow() {
+        String input = "input\ntruk\nmobil\nbaru\n2030\n2025\n1000000000\n9\n2\n10\n500000000\nexit\n";
         controller(input, unusedApi()).runInteractive();
         assertTrue(output().contains("Error: Jenis kendaraan harus Mobil atau Motor."));
+        assertTrue(output().contains("Error: Tahun kendaraan tidak boleh lebih dari 2025."));
+        assertTrue(output().contains("Error: Tenor harus 1-6 tahun."));
+        assertTrue(output().contains("Error: DP kendaraan Baru minimal 35%"));
+        assertTrue(output().contains("tahun 2 : Rp."));
+    }
+
+    @Test
+    void cancelKeywordAbortsInputAndReturnsToCommandPrompt() {
+        String input = "input\nmobil\nBATAL\nshow\nexit\n";
+        controller(input, unusedApi()).runInteractive();
+        assertTrue(output().contains("Input dibatalkan."));
         assertTrue(output().contains("Command yang tersedia"));
+    }
+
+    @Test
+    void endOfInputInsideInputFlowStopsCleanly() {
+        controller("input\nmobil\n", unusedApi()).runInteractive();
+        assertTrue(output().contains("Kondisi (Bekas|Baru)"));
     }
 
     @Test

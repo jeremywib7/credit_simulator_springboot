@@ -1,27 +1,33 @@
 package com.credit.controller;
 
+import com.credit.exception.InputCancelledException;
 import com.credit.exception.InputEndedException;
 import com.credit.exception.InvalidLoanException;
 import com.credit.exception.LoanApiException;
 import com.credit.factory.LoanRequestFactory;
 import com.credit.model.Calculation;
 import com.credit.model.LoanRequest;
+import com.credit.model.VehicleCondition;
+import com.credit.model.VehicleType;
 import com.credit.service.LoanApiClient;
 import com.credit.service.LoanCalculator;
 import com.credit.service.SheetManager;
 import com.credit.view.ConsoleView;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 public class LoanController {
 
     private static final int FILE_FIELD_COUNT = 6;
+    private static final String CANCEL_KEYWORD = "batal";
 
     private final ConsoleView view;
     private final LoanRequestFactory factory;
@@ -87,6 +93,8 @@ public class LoanController {
             command.action().run(parts.length > 1 ? parts[1] : "");
         } catch (InvalidLoanException | LoanApiException e) {
             view.showError(e.getMessage());
+        } catch (InputCancelledException e) {
+            view.println(e.getMessage());
         }
     }
 
@@ -107,18 +115,28 @@ public class LoanController {
     }
 
     private void input() {
-        String type = view.prompt("Jenis Kendaraan (Motor|Mobil)");
-        factory.parseVehicleType(type);
-        String condition = view.prompt("Kondisi (Bekas|Baru)");
-        factory.parseCondition(condition);
-        String year = view.prompt("Tahun Kendaraan (4 digit)");
-        factory.parseYear(year, factory.parseCondition(condition));
-        String total = view.prompt("Jumlah Pinjaman Total (maks 1 miliar)");
-        factory.parseTotalLoan(total);
-        String tenor = view.prompt("Tenor Pinjaman (1-6 tahun)");
-        factory.parseTenor(tenor);
-        String dp = view.prompt("Jumlah DP");
-        calculateAndShow(factory.create(type, condition, year, total, tenor, dp));
+        view.println("Ketik '" + CANCEL_KEYWORD + "' pada pertanyaan mana pun untuk membatalkan.");
+        VehicleType type = ask("Jenis Kendaraan (Motor|Mobil)", factory::parseVehicleType);
+        VehicleCondition condition = ask("Kondisi (Bekas|Baru)", factory::parseCondition);
+        int year = ask("Tahun Kendaraan (4 digit)", raw -> factory.parseYear(raw, condition));
+        BigDecimal total = ask("Jumlah Pinjaman Total (maks 1 miliar)", factory::parseTotalLoan);
+        int tenor = ask("Tenor Pinjaman (1-6 tahun)", factory::parseTenor);
+        BigDecimal downPayment = ask("Jumlah DP", raw -> factory.parseDownPayment(raw, total, condition));
+        calculateAndShow(new LoanRequest(type, condition, year, total, tenor, downPayment));
+    }
+
+    private <T> T ask(String label, Function<String, T> parser) {
+        while (true) {
+            String raw = view.prompt(label);
+            if (CANCEL_KEYWORD.equalsIgnoreCase(raw.trim())) {
+                throw new InputCancelledException();
+            }
+            try {
+                return parser.apply(raw);
+            } catch (InvalidLoanException e) {
+                view.showError(e.getMessage());
+            }
+        }
     }
 
     private void load() {
