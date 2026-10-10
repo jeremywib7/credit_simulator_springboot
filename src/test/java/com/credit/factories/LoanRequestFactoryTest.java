@@ -1,4 +1,4 @@
-package com.credit.factory;
+package com.credit.factories;
 
 import com.credit.exception.InvalidLoanException;
 import com.credit.model.LoanRequest;

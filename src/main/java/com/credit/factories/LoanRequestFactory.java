@@ -1,33 +1,35 @@
-package com.credit.factory;
+package com.credit.factories;
 
+import com.credit.constant.ErrorMessage;
 import com.credit.exception.InvalidLoanException;
 import com.credit.model.LoanRequest;
 import com.credit.model.VehicleCondition;
 import com.credit.model.VehicleType;
+import com.credit.validator.LoanValidator;
 
 import java.math.BigDecimal;
 import java.time.Clock;
-import java.time.Year;
 import java.util.regex.Pattern;
 
 public class LoanRequestFactory {
 
-    public static final BigDecimal MAX_LOAN = new BigDecimal("1000000000");
-    public static final int MAX_TENOR = 6;
-
     private static final Pattern ALPHABET = Pattern.compile("^[A-Za-z]+$");
     private static final Pattern DIGITS = Pattern.compile("^\\d+$");
     private static final Pattern YEAR = Pattern.compile("^\\d{4}$");
-    private static final BigDecimal HUNDRED = new BigDecimal("100");
+    private static final int MAX_INT_DIGITS = 9;
 
-    private final Clock clock;
+    private final LoanValidator validator;
 
     public LoanRequestFactory() {
         this(Clock.systemDefaultZone());
     }
 
     public LoanRequestFactory(Clock clock) {
-        this.clock = clock;
+        this(new LoanValidator(clock));
+    }
+
+    public LoanRequestFactory(LoanValidator validator) {
+        this.validator = validator;
     }
 
     public LoanRequest create(String type, String condition, String year, String totalLoan,
@@ -42,84 +44,60 @@ public class LoanRequestFactory {
     }
 
     public VehicleType parseVehicleType(String raw) {
-        String value = requireAlphabet(raw, "Jenis kendaraan");
+        String value = requireAlphabet(raw, ErrorMessage.FIELD_VEHICLE_TYPE);
         for (VehicleType type : VehicleType.values()) {
             if (type.label().equalsIgnoreCase(value)) {
                 return type;
             }
         }
-        throw new InvalidLoanException("Jenis kendaraan harus Mobil atau Motor.");
+        throw new InvalidLoanException(ErrorMessage.VEHICLE_TYPE_INVALID);
     }
 
     public VehicleCondition parseCondition(String raw) {
-        String value = requireAlphabet(raw, "Kondisi kendaraan");
+        String value = requireAlphabet(raw, ErrorMessage.FIELD_CONDITION);
         for (VehicleCondition condition : VehicleCondition.values()) {
             if (condition.label().equalsIgnoreCase(value)) {
                 return condition;
             }
         }
-        throw new InvalidLoanException("Kondisi kendaraan harus Baru atau Bekas.");
+        throw new InvalidLoanException(ErrorMessage.CONDITION_INVALID);
     }
 
     public int parseYear(String raw, VehicleCondition condition) {
-        String value = requireText(raw, "Tahun kendaraan");
+        String value = requireText(raw, ErrorMessage.FIELD_YEAR);
         if (!YEAR.matcher(value).matches()) {
-            throw new InvalidLoanException("Tahun kendaraan harus 4 digit angka.");
+            throw new InvalidLoanException(ErrorMessage.YEAR_FORMAT);
         }
         int year = Integer.parseInt(value);
-        int currentYear = Year.now(clock).getValue();
-        if (year > currentYear) {
-            throw new InvalidLoanException("Tahun kendaraan tidak boleh lebih dari " + currentYear + ".");
-        }
-        int minYear = currentYear - 1;
-        if (condition == VehicleCondition.BARU && year < minYear) {
-            throw new InvalidLoanException("Tahun kendaraan baru tidak boleh kurang dari " + minYear + ".");
-        }
+        validator.validateYear(year, condition);
         return year;
     }
 
     public BigDecimal parseTotalLoan(String raw) {
-        BigDecimal total = parseAmount(raw, "Jumlah pinjaman");
-        if (total.signum() <= 0) {
-            throw new InvalidLoanException("Jumlah pinjaman harus lebih dari 0.");
-        }
-        if (total.compareTo(MAX_LOAN) > 0) {
-            throw new InvalidLoanException("Jumlah pinjaman maksimal 1 miliar.");
-        }
+        BigDecimal total = parseAmount(raw, ErrorMessage.FIELD_LOAN);
+        validator.validateTotalLoan(total);
         return total;
     }
 
     public int parseTenor(String raw) {
-        String value = requireText(raw, "Tenor");
-        if (!DIGITS.matcher(value).matches() || value.length() > 9) {
-            throw new InvalidLoanException("Tenor harus berupa angka 1-" + MAX_TENOR + " tahun.");
+        String value = requireText(raw, ErrorMessage.FIELD_TENOR);
+        if (!DIGITS.matcher(value).matches() || value.length() > MAX_INT_DIGITS) {
+            throw new InvalidLoanException(ErrorMessage.TENOR_FORMAT);
         }
         int tenor = Integer.parseInt(value);
-        if (tenor < 1 || tenor > MAX_TENOR) {
-            throw new InvalidLoanException("Tenor harus 1-" + MAX_TENOR + " tahun.");
-        }
+        validator.validateTenor(tenor);
         return tenor;
     }
 
     public BigDecimal parseDownPayment(String raw, BigDecimal totalLoan, VehicleCondition condition) {
-        BigDecimal dp = parseAmount(raw, "Jumlah DP");
-        if (dp.signum() < 0) {
-            throw new InvalidLoanException("Jumlah DP tidak boleh negatif.");
-        }
-        if (dp.compareTo(totalLoan) >= 0) {
-            throw new InvalidLoanException("Jumlah DP harus lebih kecil dari jumlah pinjaman.");
-        }
-        BigDecimal minDp = totalLoan.multiply(condition.minDownPaymentPercent()).divide(HUNDRED);
-        if (dp.compareTo(minDp) < 0) {
-            throw new InvalidLoanException("DP kendaraan " + condition.label() + " minimal "
-                    + condition.minDownPaymentPercent().toPlainString() + "% dari jumlah pinjaman.");
-        }
-        return dp;
+        BigDecimal downPayment = parseAmount(raw, ErrorMessage.FIELD_DOWN_PAYMENT);
+        validator.validateDownPayment(downPayment, totalLoan, condition);
+        return downPayment;
     }
 
     private String requireText(String raw, String field) {
         if (raw == null || raw.isBlank()) {
-            throw new InvalidLoanException(field + " wajib diisi.");
+            throw new InvalidLoanException(ErrorMessage.REQUIRED.formatted(field));
         }
         return raw.trim();
     }
@@ -127,7 +105,7 @@ public class LoanRequestFactory {
     private String requireAlphabet(String raw, String field) {
         String value = requireText(raw, field);
         if (!ALPHABET.matcher(value).matches()) {
-            throw new InvalidLoanException(field + " hanya boleh huruf.");
+            throw new InvalidLoanException(ErrorMessage.ALPHABET_ONLY.formatted(field));
         }
         return value;
     }
@@ -137,7 +115,7 @@ public class LoanRequestFactory {
         try {
             return new BigDecimal(value);
         } catch (NumberFormatException e) {
-            throw new InvalidLoanException(field + " harus berupa angka.", e);
+            throw new InvalidLoanException(ErrorMessage.NUMBER_ONLY.formatted(field), e);
         }
     }
 }

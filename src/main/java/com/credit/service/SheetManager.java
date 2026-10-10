@@ -1,5 +1,6 @@
 package com.credit.service;
 
+import com.credit.constant.ErrorMessage;
 import com.credit.exception.InvalidLoanException;
 import com.credit.model.Calculation;
 
@@ -30,7 +31,7 @@ public class SheetManager {
 
     public void switchTo(String name) {
         if (name == null || name.isBlank()) {
-            throw new InvalidLoanException("Nama sheet wajib diisi.");
+            throw new InvalidLoanException(ErrorMessage.SHEET_NAME_REQUIRED);
         }
         active = name.trim();
         sheets.computeIfAbsent(active, key -> new ArrayList<>());
