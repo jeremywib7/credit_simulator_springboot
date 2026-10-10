@@ -61,6 +61,14 @@ class LoanRequestFactoryTest {
     }
 
     @Test
+    void yearInTheFutureIsRejectedForAnyCondition() {
+        assertEquals(2025, factory.parseYear("2025", VehicleCondition.BARU));
+        assertEquals(2025, factory.parseYear("2025", VehicleCondition.BEKAS));
+        assertThrows(InvalidLoanException.class, () -> factory.parseYear("2026", VehicleCondition.BARU));
+        assertThrows(InvalidLoanException.class, () -> factory.parseYear("9999", VehicleCondition.BEKAS));
+    }
+
+    @Test
     void usedVehicleAcceptsOldYear() {
         assertEquals(2010, factory.parseYear("2010", VehicleCondition.BEKAS));
     }

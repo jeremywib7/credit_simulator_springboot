@@ -67,7 +67,11 @@ public class LoanRequestFactory {
             throw new InvalidLoanException("Tahun kendaraan harus 4 digit angka.");
         }
         int year = Integer.parseInt(value);
-        int minYear = Year.now(clock).getValue() - 1;
+        int currentYear = Year.now(clock).getValue();
+        if (year > currentYear) {
+            throw new InvalidLoanException("Tahun kendaraan tidak boleh lebih dari " + currentYear + ".");
+        }
+        int minYear = currentYear - 1;
         if (condition == VehicleCondition.BARU && year < minYear) {
             throw new InvalidLoanException("Tahun kendaraan baru tidak boleh kurang dari " + minYear + ".");
         }
