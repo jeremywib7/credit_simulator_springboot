@@ -100,9 +100,12 @@ Layers (MVC + Command + Factory), no framework:
 
 Adding a command = add a `Command` class and register it in `LoanController`; `show` picks it up automatically.
 
-Web service URL comes from `application.properties` (`api.url`, bundled in the jar). Override it,
-highest priority first: env `CREDIT_API_URL`, then `credit_simulator.properties` in the working
-directory (git-ignored), e.g. `api.url=http://127.0.0.1:8765/loan.json`.
+Web service URL is read from the `api.url` property. Values may use ` ${ENV_NAME:default} ` placeholders, resolved from
+environment variables. Lookup order:
+
+1. `credit_simulator.properties` in the working directory (git-ignored), e.g. `api.url=http://127.0.0.1:8765/loan.json`.
+2. `application.properties` bundled in the jar: `api.url=${CREDIT_API_URL:https://run.mocky.io/v3/...}` - so the
+   env var `CREDIT_API_URL` overrides it, and the mocky URL is the default.
 ## Tests
 ```sh
 ./mvnw test                 # unit tests (JUnit 5), no network needed for the API flow
@@ -115,7 +118,7 @@ sh scripts/smoke-test.sh    # end-to-end check of the launcher (needs the built 
   (`run.mocky.io`) may no longer be served. It was observed answering with a self-signed
   `CN=lolcatho.st` certificate and HTTP 404, so this is not a local trust problem. Point the app at
   any server that returns the JSON from the task statement:
-  a `credit_simulator.properties` file next to where you run the app, containing
+  env `CREDIT_API_URL` or a `credit_simulator.properties` file next to where you run the app, containing
   `api.url=http://127.0.0.1:8765/loan.json` (serve `scripts/mock/loan.json` with
   `python -m http.server 8765 --directory scripts/mock`). The `load` flow itself is covered
   by `LoanApiClientTest` against a local HTTP server.
