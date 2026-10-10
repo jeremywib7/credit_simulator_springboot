@@ -20,7 +20,7 @@ public class LoanCalculator {
             if (year > 1) {
                 rate = rate.add(year % 2 == 0 ? LoanRules.EVEN_YEAR_RATE_STEP : LoanRules.ODD_YEAR_RATE_STEP);
             }
-            BigDecimal withInterest = balance.add(balance.multiply(rate).divide(LoanRules.HUNDRED));
+            BigDecimal withInterest = balance.add(balance.multiply(rate).movePointLeft(2));
             int remainingMonths = (request.tenorYears() - year + 1) * LoanRules.MONTHS_PER_YEAR;
             BigDecimal monthly = withInterest.divide(BigDecimal.valueOf(remainingMonths), 10, RoundingMode.HALF_UP);
             balance = withInterest.subtract(monthly.multiply(BigDecimal.valueOf(LoanRules.MONTHS_PER_YEAR)));

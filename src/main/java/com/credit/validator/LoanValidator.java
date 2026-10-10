@@ -50,7 +50,7 @@ public class LoanValidator {
         if (downPayment.compareTo(totalLoan) >= 0) {
             throw new InvalidLoanException(ErrorMessage.DP_NOT_BELOW_LOAN);
         }
-        BigDecimal minimum = totalLoan.multiply(condition.minDownPaymentPercent()).divide(LoanRules.HUNDRED);
+        BigDecimal minimum = totalLoan.multiply(condition.minDownPaymentPercent()).movePointLeft(2);
         if (downPayment.compareTo(minimum) < 0) {
             throw new InvalidLoanException(ErrorMessage.DP_BELOW_MINIMUM
                     .formatted(condition.label(), condition.minDownPaymentPercent().toPlainString()));
