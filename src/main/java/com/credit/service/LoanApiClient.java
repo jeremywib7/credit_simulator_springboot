@@ -1,5 +1,6 @@
 package com.credit.service;
 
+import com.credit.config.AppConfig;
 import com.credit.exception.LoanApiException;
 import com.credit.factory.LoanRequestFactory;
 import com.credit.model.LoanRequest;
@@ -15,8 +16,6 @@ import java.time.Duration;
 
 public class LoanApiClient {
 
-    public static final String DEFAULT_URL = "https://run.mocky.io/v3/9108b1da-beec-409e-ae14-e8091955666c";
-
     private static final int HTTP_OK = 200;
 
     private final HttpClient httpClient;
@@ -31,9 +30,8 @@ public class LoanApiClient {
     }
 
     public static LoanApiClient createDefault(LoanRequestFactory factory) {
-        String url = System.getenv().getOrDefault("CREDIT_API_URL", DEFAULT_URL);
         HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
-        return new LoanApiClient(client, factory, url);
+        return new LoanApiClient(client, factory, AppConfig.apiUrl());
     }
 
     public LoanRequest fetch() {
