@@ -60,7 +60,7 @@ public class LoanApiClient implements LoanDataProvider {
         } catch (IOException e) {
             throw new LoanApiException(ErrorMessage.API_INVALID_JSON, e);
         }
-        if (root == null || !root.isObject()) {
+        if (!root.isObject()) {
             throw new LoanApiException(ErrorMessage.API_NOT_AN_OBJECT);
         }
         return factory.create(
