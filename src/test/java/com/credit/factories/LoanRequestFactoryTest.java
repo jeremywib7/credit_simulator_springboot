@@ -28,6 +28,11 @@ class LoanRequestFactoryTest {
     }
 
     @Test
+    void defaultConstructorUsesSystemClock() {
+        assertEquals(VehicleType.MOTOR, new LoanRequestFactory().parseVehicleType("MOTOR"));
+    }
+
+    @Test
     void rejectsUnknownVehicleType() {
         assertThrows(InvalidLoanException.class, () -> factory.parseVehicleType("Truk"));
     }

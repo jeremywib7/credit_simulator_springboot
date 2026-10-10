@@ -20,6 +20,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class LoanApiClientTest {
@@ -96,6 +97,25 @@ class LoanApiClientTest {
         status = 200;
         body = "{\"vehicleType\":\"Mobil\"}";
         assertThrows(LoanApiException.class, () -> client().fetch());
+    }
+
+    @Test
+    void toRequestRejectsEmptyNullAndNonObjectJson() {
+        LoanApiClient client = client();
+        assertThrows(LoanApiException.class, () -> client.toRequest(""));
+        assertThrows(LoanApiException.class, () -> client.toRequest("null"));
+        assertThrows(LoanApiException.class, () -> client.toRequest("[]"));
+    }
+
+    @Test
+    void toRequestRejectsExplicitJsonNullField() {
+        String body = VALID_BODY.replace("\"downPayment\":500000000", "\"downPayment\":null");
+        assertThrows(LoanApiException.class, () -> client().toRequest(body));
+    }
+
+    @Test
+    void createDefaultBuildsClientFromConfiguredUrl() {
+        assertNotNull(LoanApiClient.createDefault(factory));
     }
 
     @Test

@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class AppConfigTest {
@@ -51,6 +52,25 @@ class AppConfigTest {
         Path file = dir.resolve("credit_simulator.properties");
         Files.writeString(file, "other=1\napi.url=  \n");
         assertEquals(MOCKY, AppConfig.apiUrl(Map.of(), file));
+    }
+
+    @Test
+    void localFileWithoutApiUrlKeyFallsBackToBundled(@TempDir Path dir) throws IOException {
+        Path file = dir.resolve("credit_simulator.properties");
+        Files.writeString(file, "other=1\n");
+        assertEquals(MOCKY, AppConfig.apiUrl(Map.of(), file));
+    }
+
+    @Test
+    void localPlaceholderResolvingToBlankFallsBackToBundled(@TempDir Path dir) throws IOException {
+        Path file = dir.resolve("credit_simulator.properties");
+        Files.writeString(file, "api.url=${UNSET:}\n");
+        assertEquals(MOCKY, AppConfig.apiUrl(Map.of(), file));
+    }
+
+    @Test
+    void noArgumentOverloadAlwaysYieldsAUrl() {
+        assertFalse(AppConfig.apiUrl().isBlank());
     }
 
     @Test

@@ -71,6 +71,12 @@ class LoanControllerTest {
     }
 
     @Test
+    void nullLineIsIgnored() {
+        controller("", unusedApi()).dispatch(null);
+        assertEquals("", output());
+    }
+
+    @Test
     void blankLineIsIgnored() {
         controller("", unusedApi()).dispatch("   ");
         assertEquals("", output());
