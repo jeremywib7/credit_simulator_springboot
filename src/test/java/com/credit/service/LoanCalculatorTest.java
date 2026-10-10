@@ -52,13 +52,18 @@ class LoanCalculatorTest {
     }
 
     @Test
-    void lastYearClearsRemainingBalance() {
-        List<YearlyInstallment> r = calculator.calculate(request(VehicleType.MOBIL, 2, "200000000", "70000000"));
-        BigDecimal yearOneTotal = new BigDecimal("130000000").multiply(new BigDecimal("1.08"));
-        BigDecimal paidYearOne = r.get(0).monthlyAmount().multiply(BigDecimal.valueOf(12));
-        BigDecimal balance = yearOneTotal.subtract(paidYearOne);
-        BigDecimal dueYearTwo = balance.multiply(new BigDecimal("1.081"));
-        BigDecimal paidYearTwo = r.get(1).monthlyAmount().multiply(BigDecimal.valueOf(12));
-        assertEquals(0, dueYearTwo.subtract(paidYearTwo).abs().compareTo(new BigDecimal("1")) < 0 ? 0 : 1);
+    void threeYearExampleMatchesReferenceNumbers() {
+        List<YearlyInstallment> r = calculator.calculate(request(VehicleType.MOBIL, 3, "100000000", "25000000"));
+        assertEquals(new BigDecimal("2250000.00"), r.get(0).monthlyAmount());
+        assertEquals(new BigDecimal("2432250.00"), r.get(1).monthlyAmount());
+        assertEquals(new BigDecimal("2641423.50"), r.get(2).monthlyAmount());
+    }
+
+    @Test
+    void roundingToTwoDecimalsDoesNotDriftTheNextYear() {
+        List<YearlyInstallment> r = calculator.calculate(request(VehicleType.MOBIL, 6, "1000000000", "500000000"));
+        assertEquals(new BigDecimal("9570757.82"), r.get(3).monthlyAmount());
+        assertEquals(new BigDecimal("10451267.53"), r.get(4).monthlyAmount());
+        assertEquals(new BigDecimal("11423235.41"), r.get(5).monthlyAmount());
     }
 }
