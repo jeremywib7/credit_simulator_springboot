@@ -1,8 +1,9 @@
 package com.credit.service;
 
 import com.credit.config.AppConfig;
+import com.credit.constant.ErrorMessage;
 import com.credit.exception.LoanApiException;
-import com.credit.factory.LoanRequestFactory;
+import com.credit.factories.LoanRequestFactory;
 import com.credit.model.LoanRequest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,7 +15,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 
-public class LoanApiClient {
+public class LoanApiClient implements LoanDataProvider {
 
     private static final int HTTP_OK = 200;
 
@@ -34,6 +35,7 @@ public class LoanApiClient {
         return new LoanApiClient(client, factory, AppConfig.apiUrl());
     }
 
+    @Override
     public LoanRequest fetch() {
         HttpRequest request = HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(15)).GET().build();
         HttpResponse<String> response;
@@ -41,12 +43,12 @@ public class LoanApiClient {
             response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new LoanApiException("Pemanggilan API terputus.", e);
+            throw new LoanApiException(ErrorMessage.API_INTERRUPTED, e);
         } catch (IOException e) {
-            throw new LoanApiException("Gagal memanggil API: " + e.getMessage(), e);
+            throw new LoanApiException(ErrorMessage.API_CALL_FAILED.formatted(e.getMessage()), e);
         }
         if (response.statusCode() != HTTP_OK) {
-            throw new LoanApiException("API membalas HTTP " + response.statusCode() + ".");
+            throw new LoanApiException(ErrorMessage.API_HTTP_STATUS.formatted(response.statusCode()));
         }
         return toRequest(response.body());
     }
@@ -56,10 +58,10 @@ public class LoanApiClient {
         try {
             root = objectMapper.readTree(body);
         } catch (IOException e) {
-            throw new LoanApiException("Respons API bukan JSON valid.", e);
+            throw new LoanApiException(ErrorMessage.API_INVALID_JSON, e);
         }
         if (root == null || !root.isObject()) {
-            throw new LoanApiException("Respons API kosong atau bukan objek JSON.");
+            throw new LoanApiException(ErrorMessage.API_NOT_AN_OBJECT);
         }
         return factory.create(
                 text(root, "vehicleType"),
@@ -73,7 +75,7 @@ public class LoanApiClient {
     private String text(JsonNode root, String field) {
         JsonNode node = root.get(field);
         if (node == null || node.isNull()) {
-            throw new LoanApiException("Field '" + field + "' tidak ada pada respons API.");
+            throw new LoanApiException(ErrorMessage.API_FIELD_MISSING.formatted(field));
         }
         return node.asText();
     }

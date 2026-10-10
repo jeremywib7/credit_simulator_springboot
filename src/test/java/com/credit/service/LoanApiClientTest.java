@@ -2,7 +2,7 @@ package com.credit.service;
 
 import com.credit.exception.InvalidLoanException;
 import com.credit.exception.LoanApiException;
-import com.credit.factory.LoanRequestFactory;
+import com.credit.factories.LoanRequestFactory;
 import com.credit.model.LoanRequest;
 import com.credit.model.VehicleCondition;
 import com.credit.model.VehicleType;
