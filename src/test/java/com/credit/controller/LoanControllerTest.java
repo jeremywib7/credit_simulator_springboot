@@ -1,11 +1,12 @@
 package com.credit.controller;
 
 import com.credit.exception.InvalidLoanException;
-import com.credit.factory.LoanRequestFactory;
+import com.credit.factories.LoanRequestFactory;
 import com.credit.model.LoanRequest;
 import com.credit.model.VehicleCondition;
 import com.credit.model.VehicleType;
-import com.credit.service.LoanApiClient;
+import com.credit.exception.LoanApiException;
+import com.credit.service.LoanDataProvider;
 import com.credit.service.LoanCalculator;
 import com.credit.service.SheetManager;
 import com.credit.view.ConsoleView;
@@ -18,7 +19,6 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.StringReader;
 import java.math.BigDecimal;
-import java.net.http.HttpClient;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
@@ -36,22 +36,19 @@ class LoanControllerTest {
     private final ByteArrayOutputStream captured = new ByteArrayOutputStream();
     private final SheetManager sheets = new SheetManager();
 
-    private LoanController controller(String input, LoanApiClient api) {
+    private LoanController controller(String input, LoanDataProvider provider) {
         ConsoleView view = new ConsoleView(new BufferedReader(new StringReader(input)), new PrintStream(captured, true));
-        return new LoanController(view, factory, new LoanCalculator(), api, sheets);
+        return new LoanController(view, factory, new LoanCalculator(), provider, sheets);
     }
 
-    private LoanApiClient unusedApi() {
-        return new LoanApiClient(HttpClient.newHttpClient(), factory, "http://127.0.0.1:1/none");
-    }
-
-    private LoanApiClient stubApi(LoanRequest request) {
-        return new LoanApiClient(HttpClient.newHttpClient(), factory, "http://127.0.0.1:1/none") {
-            @Override
-            public LoanRequest fetch() {
-                return request;
-            }
+    private LoanDataProvider unusedApi() {
+        return () -> {
+            throw new LoanApiException("tidak dipanggil");
         };
+    }
+
+    private LoanDataProvider stubApi(LoanRequest request) {
+        return () -> request;
     }
 
     private String output() {
