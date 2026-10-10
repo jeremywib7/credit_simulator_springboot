@@ -1,0 +1,8 @@
+{
+  "vehicleType": "Mobil",
+  "vehicleCondition": "Bekas",
+  "vehicleYear": 2020,
+  "totalLoanAmount": 1000000000,
+  "loanTenure": 6,
+  "downPayment": 500000000
+}

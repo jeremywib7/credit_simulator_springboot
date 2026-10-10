@@ -87,7 +87,9 @@ Dockerfile, .github/workflows/ci.yml
 - `model` records/enums, `factory.LoanRequestFactory` (validates and builds requests),
   `service` (`LoanCalculator`, `LoanApiClient`, `SheetManager`), `view.ConsoleView`,
   `controller.LoanController` (command registry; `show` is generated from it).
-- Web service URL defaults to the mocky endpoint; override with env `CREDIT_API_URL`.
+- Web service URL comes from `application.properties` (`api.url`, bundled in the jar). Override it,
+  highest priority first: env `CREDIT_API_URL`, then `credit_simulator.properties` in the working
+  directory (git-ignored), e.g. `api.url=http://127.0.0.1:8765/loan.json`.
 
 ## Tests
 ```sh
@@ -101,7 +103,9 @@ sh scripts/smoke-test.sh    # end-to-end check of the launcher (needs the built 
   (`run.mocky.io`) may no longer be served. It was observed answering with a self-signed
   `CN=lolcatho.st` certificate and HTTP 404, so this is not a local trust problem. Point the app at
   any server that returns the JSON from the task statement:
-  `CREDIT_API_URL=http://127.0.0.1:8765/loan ./credit_simulator`. The `load` flow itself is covered
+  a `credit_simulator.properties` file next to where you run the app, containing
+  `api.url=http://127.0.0.1:8765/loan.json` (serve `scripts/mock/loan.json` with
+  `python -m http.server 8765 --directory scripts/mock`). The `load` flow itself is covered
   by `LoanApiClientTest` against a local HTTP server.
 - IDE shows `class file for com.fasterxml.jackson.core.Versioned not found`: Jackson was added as
   a plain jar instead of through Maven. Remove manual libraries and reload the Maven project.
