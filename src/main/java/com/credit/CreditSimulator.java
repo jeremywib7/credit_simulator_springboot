@@ -2,7 +2,7 @@ package com.credit;
 
 import com.credit.controller.LoanController;
 import com.credit.exception.InvalidLoanException;
-import com.credit.factory.LoanRequestFactory;
+import com.credit.factories.LoanRequestFactory;
 import com.credit.service.LoanApiClient;
 import com.credit.service.LoanCalculator;
 import com.credit.service.SheetManager;
